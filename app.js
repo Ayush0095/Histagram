@@ -65,11 +65,17 @@ app.post("/login",async (req,res)=>{
                 userid:user._id},
                 "secretKey"
             )
-             res.status(200).send("You can login")
+             res.status(200).redirect('/profile');
         }
         else res.redirect('/login');
     })
 }); 
+
+//Creating profile page for a logged in user.
+app.get("/profile",isLoggedIn,async(req,res)=>{
+    let user = await userModel.findOne({email: req.user.email}).populate("posts");
+    res.render("profile",{user});
+})
 
 //Creating logout route
 app.get('/logout',(req,res)=>{
@@ -77,9 +83,22 @@ app.get('/logout',(req,res)=>{
     res.redirect("/login");
 })
 
+//Creating route for making posts
+app.post('/post',isLoggedIn,async(req,res)=>{
+    let user = await userModel.findOne({email:req.user.email});
+    let{content} = req.body;
+    let post = await postModel.create({
+        user: user._id,
+        content,
+    });
+    user.posts.push(post._id);
+    await user.save();
+    res.redirect("profile");
+});
+
 //Adding middlewares for protected routes
 function isLoggedIn(req,res,next){
-    if(req.cookies.token==="") return res.send("You Must be Loggen in");
+    if(req.cookies.token==="") return res.redirect("/login");
     else{
         let data =  jwt.verify(req.cookies.token,"secretKey")
         req.user = data;
