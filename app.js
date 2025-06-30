@@ -74,7 +74,7 @@ app.post("/login",async (req,res)=>{
 //Creating profile page for a logged in user.
 app.get("/profile",isLoggedIn,async(req,res)=>{
     let user = await userModel.findOne({email: req.user.email}).populate("posts");
-    res.render("profile",{user});
+    res.render("profile",{user:user});
 })
 
 //Creating logout route
@@ -95,6 +95,34 @@ app.post('/post',isLoggedIn,async(req,res)=>{
     await user.save();
     res.redirect("profile");
 });
+
+//creating like route 
+app.get('/like/:id',isLoggedIn,async(req,res)=>{
+    let post = await postModel.findOne({_id:req.params.id}).populate("user");
+
+    //if the user has not liked the post
+    if(post.likes.indexOf(req.user.userid)===-1){
+        post.likes.push(req.user.userid);
+    }else{
+        //if the wants to unlike the post
+        post.likes.splice(post.likes.indexOf(req.user.userid),1);
+    }
+    
+    await post.save();
+    let user = await userModel.findOne({ email: req.user.email }).populate("posts");
+    res.render("profile", { user });
+})
+
+//creating edit route
+app.get('/edit/:id',isLoggedIn,async(req,res)=>{
+    let post = await postModel.findOne({_id:req.params.id}).populate("user");
+    res.render("edit",{post});
+})
+
+app.post('/update/:id',isLoggedIn,async(req,res)=>{
+    let post = await postModel.findOneAndUpdate({_id:req.params.id},{content:req.body.content});
+    res.redirect("/profile");
+})
 
 //Adding middlewares for protected routes
 function isLoggedIn(req,res,next){
